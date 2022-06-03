@@ -1,3 +1,4 @@
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium import webdriver
@@ -24,7 +25,9 @@ def filtering(driver,item, rarity ):
             for i2 in filter_res3:
                 title = i2.get_attribute("filter-value")
                 if title == item:
-                    i2.click()
+                    actions = ActionChains(driver)
+                    actions.move_to_element(i2).perform()
+                    driver.execute_script("arguments[0].click();", i2)
                     break
         if i.get_attribute("dropdown-label") != "typeDropdown":  # Type of rarity
             choose_rearity = driver.find_element(By.XPATH, "/html/body/main/div[3]/div[1]/div[2]/ul/li[3]")
@@ -33,7 +36,9 @@ def filtering(driver,item, rarity ):
             for i2 in filter_res3:
                 title = i2.get_attribute("filter-value")
                 if title == rarity:
-                    i2.click()
+                    actions = ActionChains(driver)
+                    actions.move_to_element(i2).perform()
+                    driver.execute_script("arguments[0].click();", i2)
                     break
 
     # Click button for filter search
@@ -57,16 +62,46 @@ def getting_pages(driver):
         title = post.find_element(By.TAG_NAME, "a").get_attribute("href")
         list_of_pages.append(title)
     return list_of_pages
+
+def scroll_down_page(driver):
+    SCROLL_PAUSE_TIME = 0.5
+
+    # Get scroll height
+    last_height = driver.execute_script("return document.body.scrollHeight")
+
+    while True:
+        # Scroll down to bottom
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+        # Wait to load page
+        time.sleep(SCROLL_PAUSE_TIME)
+
+        # Calculate new scroll height and compare with last scroll height
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            break
+        last_height = new_height
+
+
+def other_page_visit(driver, list_of_pages ):
+    for i in list_of_pages:
+        driver.get(i)
+        all_info = driver.find_element(By.CLASS_NAME, "col-md-7.col-12")
+        name = all_info.find_element(By.TAG_NAME, "h1").text
+        item_price = all_info.find_element(By.CLASS_NAME, "item-price").text
+        print("Name: ", name, "\nPrice: ", item_price)
+        print()
+
 def main():
     driver = webdriver.Chrome(PATH)
     driver.get("https://fnbr.co/list")
 
-    item = "outfit".lower()
-    rarity = "dark".lower()
+    item = "pickaxe".lower()
+    rarity = "epic".lower()
 
     # Loading page and accept cookies
-    time.sleep(2)
     if check_exists_by_xpath("/html/body/div[1]/div/div/div/div[2]/div/button[1]", driver):
+        time.sleep(1)
         accept = driver.find_element(By.XPATH, "/html/body/div[1]/div/div/div/div[2]/div/button[1]")
         accept.click()
     else:
@@ -74,14 +109,10 @@ def main():
 
 
     filtering(driver, item, rarity)
+    scroll_down_page(driver)
     list_of_pages = getting_pages(driver)
-    for i in list_of_pages:
-        driver.get(i)
-        all_info = driver.find_element(By.CLASS_NAME, "col-md-7.col-12")
-        name = all_info.find_element(By.TAG_NAME, "h1").text
-        item_price = all_info.find_element(By.CLASS_NAME, "item-price").text
-        print("Name: ", name, "\nPrice: ",item_price)
-        print()
+    other_page_visit(driver, list_of_pages)
+
 
 
 
